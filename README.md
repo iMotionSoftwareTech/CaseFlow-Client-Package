@@ -1,2 +1,2 @@
-# CaseFlowDataPackage
-The CaseFlow Data Package is a Data Access Layer that enabled all API's to communicate with the CaseFlow Database
+# CaseFlow-Client-Package
+The CaseFlow client Package is a Nuget Package, which is used between the CaseFlow Portal Application and the CaseFlow Management API
