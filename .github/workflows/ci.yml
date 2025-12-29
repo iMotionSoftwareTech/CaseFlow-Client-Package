@@ -1,0 +1,43 @@
+name: CI - Build & Test (Dev)
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev ]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      # Add GitHub Packages feed (owner = repo owner by default)
+      - name: Add GitHub Packages feed
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --name github \
+            --username "github" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --store-password-in-clear-text
+
+      - name: List nuget sources (debug)
+        run: dotnet nuget list source
+        
+      - name: Restore
+        run: dotnet restore CaseFlowClient/CaseFlowClient.sln
+
+      - name: Build
+        run: dotnet build CaseFlowClient/CaseFlowClient.sln -c Release --no-restore
+
+      - name: test
+        run: dotnet test CaseFlowClient/CaseFlowClient.sln
