@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>IMotionSoftware.$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>$(AssemblyName)</RootNamespace>
+    <Authors>IMotionSoftware</Authors>
+    <Title>CaseFlow Client</Title>
+    <Copyright>IMotion Software 2025</Copyright>
+    <RepositoryUrl>https://github.com/iMotionSoftwareTech/CaseFlow-Client-Package</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/iMotionSoftwareTech?tab=packages&amp;repo_name=CaseFlow-Client-Package</PackageProjectUrl>
+    <PackageIcon>IMotionSoftwareLogo.jpg</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>github</RepositoryType>
+    <Description>CaseFlow Client is a lightweight API client and access gateway for the CaseFlow Manager API. It provides strongly-typed request and response models, service interfaces, and HTTP abstractions designed to simplify integration with the CaseFlow Portal web application and other internal consumers. The package centralizes API communication logic, promotes consistent contracts, and decouples frontend applications from direct API dependencies, enabling safer evolution, versioning, and reuse across the CaseFlow ecosystem.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\IMotionSoftwareLogo.jpg">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IMotionSoftware.CaseFlowManager.API.Models" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+  </ItemGroup>
+
+</Project>
