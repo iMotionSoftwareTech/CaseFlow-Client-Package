@@ -22,16 +22,13 @@ namespace IMotionSoftware.CaseFlowClient.Tests.UnitTests
         public async Task CreateCaseworkerRoleAsync_WhenSuccess_ReturnsNewRole()
         {
             // Arrange
-            var expected = new NewRole { IsSuccess = true, RoleId = 42 };
+            var expected = MockData.GetNewRole();
             var httpClient = HttpClientHelper.CreateHttpClient(HttpStatusCode.OK, expected);
             var logger = Mock.Of<ILogger<RoleClient>>();
             var client = new RoleClient(httpClient, logger);
 
             // Act
-            var result = await client.CreateCaseworkerRoleAsync(new CreateRoleRequest
-            {
-                RoleName = "Caseworker", Description = "Caseworker Role"
-            });
+            var result = await client.CreateCaseworkerRoleAsync(MockData.GetCreateRoleRequest());
 
             // Assert
             Assert.IsNotNull(result);
@@ -80,6 +77,86 @@ namespace IMotionSoftware.CaseFlowClient.Tests.UnitTests
             // Act
             var ex = await Assert.ThrowsExceptionAsync<ApiServerException>(
                 () => client.CreateCaseworkerRoleAsync(new CreateRoleRequest()));
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+
+            loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Error,
+                    It.IsAny<EventId>(),
+                    It.IsAny<It.IsAnyType>(),
+                    It.IsAny<Exception>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        /// <summary>
+        /// Gets all roles asynchronous when success returns new role.
+        /// </summary>
+        [TestMethod, TestCategory("UnitTest")]
+        public async Task GetAllRolesAsync_WhenSuccess_ReturnsNewRole()
+        {
+            // Arrange
+            var expected = MockData.GetCaseworkerRoles().ToList();
+            var httpClient = HttpClientHelper.CreateHttpClient(HttpStatusCode.OK, expected);
+            var logger = Mock.Of<ILogger<RoleClient>>();
+            var client = new RoleClient(httpClient, logger);
+
+            // Act
+            var result = (await client.GetAllRolesAsync()).ToList();
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(expected.Count(), result.Count());
+            for (int i = 0; i < expected.Count(); i++)
+            {
+                Assert.AreEqual(expected[i].Id, result[i].Id);
+                Assert.AreEqual(expected[i].Name, result[i].Name);
+            }
+        }
+
+        /// <summary>
+        /// Gets all roles asynchronous when bad request throws API validation exception.
+        /// </summary>
+        [TestMethod, TestCategory("UnitTest")]
+        public async Task GetAllRolesAsync_WhenBadRequest_ThrowsApiValidationException()
+        {
+            // Arrange
+            var errorMessage = "No roles found";
+
+            var httpClient = HttpClientHelper.CreateHttpClient(
+                HttpStatusCode.BadRequest,
+                errorMessage);
+
+            var logger = Mock.Of<ILogger<RoleClient>>();
+            var client = new RoleClient(httpClient, logger);
+
+            // Act + Assert
+            var ex = await Assert.ThrowsExceptionAsync<ApiValidationException>(
+                () => client.GetAllRolesAsync());
+            var message = ex.Message;
+
+            Assert.AreEqual(errorMessage, message);
+        }
+
+        /// <summary>
+        /// The get all roles asynchronous when server error throws API server exception and logs.
+        /// </summary>
+        [TestMethod, TestCategory("UnitTest")]
+        public async Task GetAllRolesAsync_WhenServerError_ThrowsApiServerException_AndLogs()
+        {
+            // Arrange
+            var httpClient = HttpClientHelper.CreateHttpClient(
+                HttpStatusCode.InternalServerError,
+                "DB failure to retreive roles");
+
+            var loggerMock = new Mock<ILogger<RoleClient>>();
+            var client = new RoleClient(httpClient, loggerMock.Object);
+
+            // Act
+            var ex = await Assert.ThrowsExceptionAsync<ApiServerException>(
+                () => client.GetAllRolesAsync());
 
             // Assert
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
