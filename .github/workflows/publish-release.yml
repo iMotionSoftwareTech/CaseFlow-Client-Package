@@ -1,0 +1,114 @@
+name: publish-release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [ main ]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  pack-and-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Add GitHub Packages feed
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --name github \
+            --username github \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --store-password-in-clear-text
+
+      - name: Determine version bump
+        id: bump
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+
+          if echo "$LABELS" | grep -q '"major"'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q '"minor"'; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          else
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate release version
+        id: version
+        run: |
+          git fetch --tags
+          LAST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            MAJOR=0; MINOR=1; PATCH=0
+          else
+            VERSION="${LAST_TAG#v}"
+            IFS='.' read MAJOR MINOR PATCH <<< "$VERSION"
+          fi
+
+          case "${{ steps.bump.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor)
+              MINOR=$((MINOR+1)); PATCH=0 ;;
+            patch)
+              PATCH=$((PATCH+1)) ;;
+          esac
+
+          TAG="v$MAJOR.$MINOR.$PATCH"
+          PKG_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "pkg_version=${PKG_VERSION}" >> $GITHUB_OUTPUT
+      
+      - name: Add GitHub Packages feed
+        run: |
+          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --name github \
+            --username "github" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --store-password-in-clear-text
+
+      - name: List nuget sources (debug)
+        run: dotnet nuget list source
+        
+      - name: Create Git tag
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Restore
+        run: dotnet restore CaseFlowClient/CaseFlowClient.sln
+
+      - name: Build
+        run: dotnet build CaseFlowClient/CaseFlowClient.sln -c Release --no-restore
+
+      - name: Pack Release package
+        run: | 
+          dotnet pack CaseFlowClient/CaseFlowClient/CaseFlowClient.csproj \
+          -c Release \
+          -o ./artifacts \
+          -p:PackageVersion=${{ steps.version.outputs.pkg_version }}
+
+      - name: List artifacts
+        run: ls -l ./artifacts
+
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget push "./artifacts/*.nupkg" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --skip-duplicate
