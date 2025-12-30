@@ -91,7 +91,7 @@ namespace IMotionSoftware.CaseFlowClient.Clients
                 throw new ApiValidationException(body ?? "Bad Request");
             }
 
-            _logger.LogError("Geting user failed. Status: {StatusCode}, Body: {Body}",
+            _logger.LogError("Getting user failed. Status: {StatusCode}, Body: {Body}",
                 response.StatusCode, body);
 
             throw new ApiServerException(response.StatusCode, body ?? "Unexpected Error");
