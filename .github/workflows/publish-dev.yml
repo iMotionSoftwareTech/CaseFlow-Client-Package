@@ -16,8 +16,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -39,51 +37,27 @@ jobs:
             exit 1
           fi
 
-      - name: Calculate prerelease version
+      - name: Set prerelease version
         id: version
         run: |
-          git fetch --tags
+          BASE_VERSION="0.1.0"
+          TYPE="${{ steps.prerelease.outputs.type }}"
+          VERSION="${BASE_VERSION}-${TYPE}.${{ github.run_number }}"
+          echo "pkg_version=${VERSION}" >> $GITHUB_OUTPUT
 
-          BASE_TAG=$(git tag --list "v*" --sort=-v:refname | head -n 1)
-          BASE_VERSION=${BASE_TAG#v}
-
-          if [ -z "$BASE_VERSION" ]; then
-            BASE_VERSION="0.1.0"
-          fi
-
-          TYPE=${{ steps.prerelease.outputs.type }}
-
-          COUNT=$(git tag --list "v${BASE_VERSION}-${TYPE}.*" | wc -l)
-          COUNT=$((COUNT + 1))
-
-          VERSION="${BASE_VERSION}-${TYPE}.${COUNT}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          
-      - name: Add GitHub Packages feed
-        run: |
-          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-            --name github \
-            --username "github" \
-            --password "${{ secrets.GITHUB_TOKEN }}" \
-            --store-password-in-clear-text
-
-      - name: List nuget sources (debug)
-        run: dotnet nuget list source
-        
       - name: Restore
         run: dotnet restore CaseFlowClient/CaseFlowClient.sln
 
       - name: Build
         run: dotnet build CaseFlowClient/CaseFlowClient.sln -c Release --no-restore
 
-      - name: Pack prerelease package
-        run: | 
-          dotnet pack CaseFlowClient/CaseFlowClient/CaseFlowClient.csproj \
+      - name: Pack
+        run: dotnet pack CaseFlowClient/CaseFlowClient/CaseFlowClient.csproj \
           -c Release \
           -o ./artifacts \
-          -p:PackageVersion=${{ steps.version.outputs.version }}
+          -p:PackageVersion=${{ steps.version.outputs.pkg_version }}
 
-      - name: Push to GitHub Packages
+      - name: Push
         run: |
           dotnet nuget push "./artifacts/*.nupkg" \
             --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
