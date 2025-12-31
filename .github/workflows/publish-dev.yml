@@ -60,7 +60,8 @@ jobs:
         run: dotnet build CaseFlowClient/CaseFlowClient.sln -c Release --no-restore
 
       - name: Pack
-        run: dotnet pack CaseFlowClient/CaseFlowClient/CaseFlowClient.csproj \
+        run: |
+          dotnet pack CaseFlowClient/CaseFlowClient/CaseFlowClient.csproj \
           -c Release \
           -o ./artifacts \
           -p:PackageVersion=${{ steps.version.outputs.pkg_version }}
